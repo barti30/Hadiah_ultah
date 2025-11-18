@@ -1,39 +1,34 @@
-# Base image PHP 8.2 with FPM
+FROM node:18 AS frontend
+
+WORKDIR /app
+
+# Copy file untuk vite dan tailwind
+COPY package.json package-lock.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+
+# PHP Stage
 FROM php:8.2-fpm
 
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    zip \
-    unzip \
-    nginx \
-    libzip-dev \
-    libonig-dev \
-    libpq-dev \
-    libxml2-dev
-
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql zip
+    git unzip libzip-dev libpq-dev libonig-dev \
+    && docker-php-ext-install pdo pdo_mysql zip
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /var/www/html
+WORKDIR /app
 
-# Copy application files
 COPY . .
 
-# Install Laravel dependencies
+# Copy hasil build Tailwind/Vite dari stage node
+COPY --from=frontend /app/public/build ./public/build
+
 RUN composer install --no-dev --optimize-autoloader
 
-# Generate optimized config & route caches
-RUN php artisan config:cache || true
-RUN php artisan route:cache || true
-
-# Expose port for Render
-EXPOSE 8080
-
-# Start Laravel server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
+# Jalankan Laravel dengan port Railway
+CMD php artisan serve --host=0.0.0.0 --port=${PORT}
