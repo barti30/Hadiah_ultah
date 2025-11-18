@@ -1,34 +1,42 @@
+# Stage 1: Build Vite/Tailwind
 FROM node:18 AS frontend
-
 WORKDIR /app
-
-# Copy file untuk vite dan tailwind
 COPY package.json package-lock.json ./
 RUN npm install
-
 COPY . .
 RUN npm run build
 
-
-# PHP Stage
+# Stage 2: Laravel + PHP-FPM
 FROM php:8.2-fpm
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev libpq-dev libonig-dev \
-    && docker-php-ext-install pdo pdo_mysql zip
+    git unzip libzip-dev libpq-dev libpng-dev \
+    && docker-php-ext-install zip pdo pdo_mysql
 
-# Install Composer
+RUN php artisan migrate --force
+RUN php artisan config:clear
+RUN php artisan cache:clear
+RUN php artisan route:clear
+RUN php artisan view:clear
+
+    # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
+# Copy source code Laravel
 COPY . .
 
-# Copy hasil build Tailwind/Vite dari stage node
+# Copy hasil build frontend
 COPY --from=frontend /app/public/build ./public/build
 
+# Install vendor
 RUN composer install --no-dev --optimize-autoloader
 
-# Jalankan Laravel dengan port Railway
-CMD php artisan serve --host=0.0.0.0 --port=${PORT}
+# Storage permission
+RUN mkdir -p /app/storage /app/bootstrap/cache \
+ && chmod -R 777 /app/storage /app/bootstrap/cache
+
+# Jalankan PHP-FPM
+CMD ["php-fpm"]
