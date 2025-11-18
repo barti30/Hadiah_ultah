@@ -22,9 +22,9 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-
+WORDIR /var/www/html
 # Copy Laravel source code
-COPY . .
+COPY . /var/www/html
 
 # Copy Vite build
 COPY --from=frontend /app/public/build ./public/build
