@@ -50,4 +50,4 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 EXPOSE 80
 
 # Start supervisor (runs nginx + php-fpm)
-CMD ["/usr/b]()
+CMD ["/usr/bin/supervisord", "-n"]()
