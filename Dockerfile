@@ -14,11 +14,6 @@ RUN apt-get update && apt-get install -y \
     git unzip libzip-dev libpq-dev libpng-dev \
     && docker-php-ext-install zip pdo pdo_mysql
 
-RUN php artisan migrate --force
-RUN php artisan config:clear
-RUN php artisan cache:clear
-RUN php artisan route:clear
-RUN php artisan view:clear
 
     # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
