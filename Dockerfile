@@ -1,48 +1,49 @@
-# =============================
-# 1. BUILD FRONTEND (Vite)
-# =============================
+# ===========================
+# Stage 1: Build Frontend (Vite/Tailwind)
+# ===========================
 FROM node:18 AS frontend
+
 WORKDIR /app
 
-# Install dependencies
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy semua source code frontend
 COPY . .
-
-# Build Vite
 RUN npm run build
 
 
-# =============================
-# 2. LARAVEL + PHP-FPM
-# =============================
+# ===========================
+# Stage 2: Laravel + PHP-FPM
+# ===========================
 FROM php:8.2-fpm
 
-# Install dependencies PHP
+# Install dependencies
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev libpng-dev \
-    && docker-php-ext-install zip pdo pdo_mysql
+    zip unzip git libzip-dev libpng-dev libpq-dev libxml2-dev \
+    && docker-php-ext-install pdo pdo_mysql zip
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Set workdir
 WORKDIR /app
 
-# Copy source code Laravel
+# Copy Laravel source code
 COPY . .
 
 # Copy hasil build frontend
-COPY --from=frontend /app/public/build /app/public/build
+COPY --from=frontend /app/public/build ./public/build
 
-# Install vendor Laravel
+# Install vendor
 RUN composer install --no-dev --optimize-autoloader
 
-# Permissions storage
-RUN mkdir -p /app/storage /app/bootstrap/cache \
-    && chmod -R 777 /app/storage /app/bootstrap/cache
+# Laravel optimize
+RUN php artisan config:cache \
+ && php artisan route:cache \
+ && php artisan view:cache
 
-# Command default
+# Permissions
+RUN mkdir -p /app/storage /app/bootstrap/cache \
+ && chown -R www-data:www-data /app/storage /app/bootstrap/cache
+
+EXPOSE 9000
 CMD ["php-fpm"]
