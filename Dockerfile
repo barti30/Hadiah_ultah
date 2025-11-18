@@ -1,37 +1,48 @@
-# Stage 1: Build Vite/Tailwind
+# =============================
+# 1. BUILD FRONTEND (Vite)
+# =============================
 FROM node:18 AS frontend
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-# Stage 2: Laravel + PHP-FPM
-FROM php:8.2-fpm
 
 # Install dependencies
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Copy semua source code frontend
+COPY . .
+
+# Build Vite
+RUN npm run build
+
+
+# =============================
+# 2. LARAVEL + PHP-FPM
+# =============================
+FROM php:8.2-fpm
+
+# Install dependencies PHP
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev libpq-dev libpng-dev \
+    git unzip libzip-dev libpng-dev \
     && docker-php-ext-install zip pdo pdo_mysql
 
-
-    # Install Composer
+# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Set workdir
 WORKDIR /app
 
 # Copy source code Laravel
 COPY . .
 
 # Copy hasil build frontend
-COPY --from=frontend /app/public/build ./public/build
+COPY --from=frontend /app/public/build /app/public/build
 
-# Install vendor
+# Install vendor Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-# Storage permission
+# Permissions storage
 RUN mkdir -p /app/storage /app/bootstrap/cache \
- && chmod -R 777 /app/storage /app/bootstrap/cache
+    && chmod -R 777 /app/storage /app/bootstrap/cache
 
-# Jalankan PHP-FPM
+# Command default
 CMD ["php-fpm"]
