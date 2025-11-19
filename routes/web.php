@@ -28,6 +28,11 @@ Route::middleware('auth')->group(function () {
         return redirect('/login');
     });
 
+Route::get('/migrate', function () {
+    Artisan::call('migrate', ['--force' => true]);
+    return 'Migrated!';
+});
+
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('admin', AdminController::class);
 });
